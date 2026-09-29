@@ -14,5 +14,5 @@ export const faq: Faq[] = [
   { q: '¿A qué hora empieza?' },
   { q: '¿Hay edad mínima?' },
   { q: '¿Puedo pagar con tarjeta el día del evento?' },
-  { q: '¿Puedo ingresar mi propia bebida?' },
+  { q: '¿Puedo ingresar mi propia bebida?', a: 'Sí. No hay descorche: puedes traer tu propio alcohol.' },
 ]
