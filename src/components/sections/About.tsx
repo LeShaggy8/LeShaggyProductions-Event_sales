@@ -6,7 +6,7 @@ export default function About() {
     <Section
       id="sobre"
       title="Qué es SpookyPeda"
-      intro="La fiesta de Halloween de Zacatecas. Empezó con 10–15 personas y este año llega a su quinta edición."
+      intro="La fiesta de Halloween de Zacatecas. Empezó con más de 100 personas y este año llega a su quinta edición."
     >
       <ul className="max-w-2xl space-y-4">
         {history.map((h) => (
