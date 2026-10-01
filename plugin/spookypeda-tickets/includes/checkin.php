@@ -77,6 +77,12 @@ function spp_checkin( $raw, $source, $user_id ) {
 	$tid  = $row->ticket_id; // Forma canónica guardada en la base.
 	$base = array( 'ticket_id' => $tid, 'order_id' => (int) $row->wc_order_id );
 
+	// Cortesía: no tiene pedido de WooCommerce. (isset: tolera la tabla antes de la migración v3.)
+	$is_courtesy = ( isset( $row->source ) && 'courtesy' === $row->source );
+	if ( $is_courtesy ) {
+		$base['courtesy'] = true;
+	}
+
 	if ( 'used' === $row->status ) {
 		spp_log_scan( 'already_used', $raw, $tid, $source, $user_id );
 		return $base + array(
@@ -88,13 +94,16 @@ function spp_checkin( $raw, $source, $user_id ) {
 
 	// Anulado a mano, o el pedido ya no está completado (reembolso/cancelación).
 	$void = ( 'unused' !== $row->status );
-	if ( ! $void && function_exists( 'wc_get_order' ) ) {
+	if ( ! $void && ! $is_courtesy && function_exists( 'wc_get_order' ) ) {
 		$order = wc_get_order( (int) $row->wc_order_id );
 		$void  = ( ! $order || 'completed' !== $order->get_status() );
 	}
 	if ( $void ) {
 		spp_log_scan( 'void', $raw, $tid, $source, $user_id );
-		return $base + array( 'result' => 'void', 'message' => 'Boleto anulado (pedido no completado).' );
+		return $base + array(
+			'result'  => 'void',
+			'message' => $is_courtesy ? 'Cortesía anulada.' : 'Boleto anulado (pedido no completado).',
+		);
 	}
 
 	$updated = $wpdb->query(

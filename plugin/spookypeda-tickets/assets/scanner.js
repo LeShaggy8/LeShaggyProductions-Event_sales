@@ -25,6 +25,7 @@
     var ui = UI[d.result] || UI.error;
     var lines = [];
     if (d.message) lines.push(d.message);
+    if (d.courtesy) lines.push('CORTESÍA');
     if (d.ticket_id) lines.push('Boleto ' + d.ticket_id);
     if (d.order_id) lines.push('Pedido #' + d.order_id);
     if (d.used_at) lines.push('Usado: ' + d.used_at);
