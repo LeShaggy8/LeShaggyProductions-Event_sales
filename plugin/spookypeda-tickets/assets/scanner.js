@@ -107,16 +107,49 @@
     camBox.classList.remove('live');
   }
 
-  function startCamera() {
-    camMsg.textContent = '';
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      camMsg.textContent = 'Este navegador no permite usar la cámara. Usa la captura manual.';
-      return;
-    }
-    navigator.mediaDevices.getUserMedia({
+  function cameraProblem(err) {
+    var name = (err && err.name) || 'desconocido';
+    var why = {
+      NotAllowedError: 'Permiso denegado. Toca el candado junto a la dirección y permite la cámara; si ya la permitiste, el sitio puede estar bloqueándola.',
+      SecurityError: 'El navegador bloqueó la cámara por seguridad (¿página sin https?).',
+      NotFoundError: 'Este dispositivo no tiene una cámara disponible.',
+      NotReadableError: 'La cámara está en uso por otra app o pestaña. Ciérrala e intenta de nuevo.',
+      OverconstrainedError: 'La cámara no cumple los ajustes pedidos.',
+      AbortError: 'No se pudo iniciar la cámara.'
+    };
+    return (why[name] || 'No se pudo abrir la cámara.') + ' [' + name + '] Puedes usar la captura manual.';
+  }
+
+  function getStream() {
+    var md = navigator.mediaDevices;
+    return md.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
-    }).then(function (s) {
+    }).catch(function (err) {
+      // Algunos equipos fallan con restricciones; se reintenta con la cámara por defecto.
+      if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError' || err.name === 'AbortError')) {
+        return md.getUserMedia({ video: true, audio: false });
+      }
+      throw err;
+    });
+  }
+
+  function startCamera() {
+    camMsg.textContent = '';
+    if (window.isSecureContext === false) {
+      camMsg.textContent = 'La cámara solo funciona en páginas https://. Abre esta página con https.';
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      camMsg.textContent = 'Este navegador no permite usar la cámara (¿navegador dentro de WhatsApp/Instagram?). Ábrelo en Chrome o Safari, o usa la captura manual.';
+      return;
+    }
+    var pp = document.permissionsPolicy || document.featurePolicy;
+    if (pp && typeof pp.allowsFeature === 'function' && !pp.allowsFeature('camera')) {
+      camMsg.textContent = 'El sitio está bloqueando la cámara con una política de permisos (cabecera Permissions-Policy del servidor o de un plugin de seguridad).';
+      return;
+    }
+    getStream().then(function (s) {
       stream = s;
       video.srcObject = s;
       return video.play();
@@ -126,11 +159,14 @@
       running = true;
       requestWake();
       loop();
-    }).catch(function () {
-      camMsg.textContent = 'No se pudo abrir la cámara. Revisa el permiso del navegador o usa la captura manual.';
+    }).catch(function (err) {
+      stopCamera();
+      camMsg.textContent = cameraProblem(err);
     });
   }
 
+  camMsg.style.color = '#9fb3ad';
+  camMsg.textContent = window.jsQR ? 'Escáner listo. Toca "Activar cámara".' : 'No cargó la librería de lectura (jsQR). La captura manual sigue funcionando.';
   startBtn.addEventListener('click', startCamera);
   nextBtn.addEventListener('click', hideResult);
   resultEl.addEventListener('click', function (e) { if (e.target === resultEl) hideResult(); });

@@ -24,6 +24,9 @@ function spp_maybe_render_scanner() {
 	nocache_headers();
 	header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
 	header( 'X-Robots-Tag: noindex, nofollow' );
+	// Algunos plugins de seguridad envían camera=() en todo el sitio; aquí se permite la cámara para esta página.
+	header( 'Permissions-Policy: camera=(self)' );
+	header( "Feature-Policy: camera 'self'" );
 
 	if ( ! is_user_logged_in() ) {
 		wp_safe_redirect( wp_login_url( home_url( '/escaner/' ) ) );
@@ -89,7 +92,7 @@ main{flex:1;width:100%;max-width:520px;margin:0 auto;padding:16px}
 		<div class="frame"></div>
 		<button type="button" id="spp-start" class="btn">Activar cámara</button>
 	</div>
-	<p class="msg" id="spp-cam-msg" role="status"></p>
+	<p class="msg" id="spp-cam-msg" role="status">Cargando escáner…</p>
 	<form class="manual" id="spp-manual" autocomplete="off">
 		<label for="spp-code">Si la cámara falla, escribe el Ticket ID</label>
 		<div class="row">
