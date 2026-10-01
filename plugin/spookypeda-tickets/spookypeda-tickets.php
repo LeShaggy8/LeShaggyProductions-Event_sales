@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: SpookyPeda Tickets
- * Description: Al completarse una orden de WooCommerce, toma los Ticket ID de Eventin, genera un QR por boleto y lo envía al comprador. (Fase 1: emisión y envío; el escáner llega en la Fase 2.)
- * Version:     0.1.1
+ * Description: Al completarse una orden de WooCommerce, toma los Ticket ID de Eventin, genera un QR por boleto y lo envía al comprador. Incluye el escáner de entrada en /escaner (Fase 2).
+ * Version:     0.2.0
  * Requires PHP: 7.4
  * Author:      LeShaggyProductions
  * Text Domain: spookypeda-tickets
@@ -12,7 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SPP_VERSION', '0.1.1' );
+define( 'SPP_VERSION', '0.2.0' );
+define( 'SPP_FILE', __FILE__ );
 define( 'SPP_DIR', plugin_dir_path( __FILE__ ) );
 
 // --- Configuración editable ---------------------------------------------
@@ -26,11 +27,16 @@ require_once SPP_DIR . 'includes/db.php';
 require_once SPP_DIR . 'includes/qr.php';
 require_once SPP_DIR . 'includes/mailer.php';
 require_once SPP_DIR . 'includes/issuer.php';
+require_once SPP_DIR . 'includes/checkin.php';
+require_once SPP_DIR . 'includes/scanner.php';
 
 register_activation_hook( __FILE__, 'spp_install' );
 add_action( 'plugins_loaded', 'spp_boot' );
 
 function spp_boot() {
+	// Esquema y rol del escáner: se aplican una sola vez tras actualizar el plugin.
+	add_action( 'init', 'spp_maybe_upgrade', 5 );
+
 	if ( ! class_exists( 'WooCommerce' ) ) {
 		add_action( 'admin_notices', function () {
 			echo '<div class="notice notice-error"><p><strong>SpookyPeda Tickets:</strong> requiere WooCommerce activo.</p></div>';
@@ -47,4 +53,8 @@ function spp_boot() {
 	add_action( 'spp_issue_tickets', 'spp_issue_tickets', 10, 2 );
 	add_filter( 'woocommerce_order_actions', 'spp_order_actions' );
 	add_action( 'woocommerce_order_action_spp_resend', 'spp_order_action_resend' );
+
+	// Fase 2: escáner (/escaner) y validación.
+	add_action( 'template_redirect', 'spp_maybe_render_scanner', 1 );
+	add_action( 'wp_ajax_spp_checkin', 'spp_ajax_checkin' );
 }
