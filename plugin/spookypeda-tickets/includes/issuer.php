@@ -17,8 +17,23 @@ function spp_schedule_issue( $order_id, $attempt, $delay ) {
 	}
 }
 
-/** Asistentes de Eventin ligados a la orden: WC order → eventin_order_id → etn-attendee. */
-function spp_find_attendees( $eventin_order_id ) {
+/** Todos los eventin_order_id guardados en la orden de WooCommerce (puede haber más de uno). */
+function spp_eventin_order_ids( $order ) {
+	$ids = array();
+	foreach ( $order->get_meta( 'eventin_order_id', false ) as $meta ) {
+		$v = trim( (string) $meta->value );
+		if ( '' !== $v ) {
+			$ids[ $v ] = true;
+		}
+	}
+	return array_map( 'strval', array_keys( $ids ) );
+}
+
+/** Asistentes de Eventin ligados a la orden: WC order → eventin_order_id(s) → etn-attendee. */
+function spp_find_attendees( $eventin_order_ids ) {
+	if ( ! $eventin_order_ids ) {
+		return array();
+	}
 	return get_posts(
 		array(
 			'post_type'   => 'etn-attendee',
@@ -27,8 +42,13 @@ function spp_find_attendees( $eventin_order_id ) {
 			'fields'      => 'ids',
 			'orderby'     => 'ID',
 			'order'       => 'ASC',
-			'meta_key'    => 'eventin_order_id',
-			'meta_value'  => (string) $eventin_order_id,
+			'meta_query'  => array(
+				array(
+					'key'     => 'eventin_order_id',
+					'value'   => $eventin_order_ids,
+					'compare' => 'IN',
+				),
+			),
 		)
 	);
 }
@@ -64,9 +84,9 @@ function spp_issue_tickets( $order_id, $attempt = 1, $force = false ) {
 	set_transient( $lock, 1, 120 );
 
 	try {
-		$eventin_order_id = $order->get_meta( 'eventin_order_id' );
-		$attendees        = $eventin_order_id ? spp_find_attendees( $eventin_order_id ) : array();
-		$expected         = spp_expected_quantity( $order );
+		$eo_ids    = spp_eventin_order_ids( $order );
+		$attendees = spp_find_attendees( $eo_ids );
+		$expected  = spp_expected_quantity( $order );
 
 		// Eventin aún no termina: reintentar más tarde.
 		if ( ! $force && count( $attendees ) < $expected && $attempt < SPP_MAX_ATTEMPTS ) {
@@ -78,11 +98,27 @@ function spp_issue_tickets( $order_id, $attempt = 1, $force = false ) {
 			return false;
 		}
 
+		$detail = array();
 		foreach ( $attendees as $attendee_id ) {
 			$ticket_id = (string) get_post_meta( $attendee_id, 'etn_unique_ticket_id', true );
+			$status    = get_post_status( $attendee_id );
 			if ( preg_match( '/^[A-Za-z0-9_-]{4,40}$/', $ticket_id ) ) {
 				spp_register_ticket( $ticket_id, $order_id, $attendee_id );
+				$detail[] = sprintf( '#%d %s (%s)', $attendee_id, $ticket_id, $status );
+			} else {
+				$detail[] = sprintf( '#%d sin Ticket ID válido (%s)', $attendee_id, $status );
 			}
+		}
+		if ( $force || count( $attendees ) < $expected ) {
+			$order->add_order_note(
+				sprintf(
+					'SpookyPeda Tickets (diagnóstico): eventin_order_id=[%s]; asistentes encontrados=%d; esperados=%d. %s',
+					implode( ',', $eo_ids ),
+					count( $attendees ),
+					$expected,
+					implode( ' | ', $detail )
+				)
+			);
 		}
 
 		$tickets = spp_get_order_tickets( $order_id );

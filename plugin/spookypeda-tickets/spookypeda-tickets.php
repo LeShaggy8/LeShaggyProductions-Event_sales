@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SpookyPeda Tickets
  * Description: Al completarse una orden de WooCommerce, toma los Ticket ID de Eventin, genera un QR por boleto y lo envía al comprador. (Fase 1: emisión y envío; el escáner llega en la Fase 2.)
- * Version:     0.1.0
+ * Version:     0.1.1
  * Requires PHP: 7.4
  * Author:      LeShaggyProductions
  * Text Domain: spookypeda-tickets
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SPP_VERSION', '0.1.0' );
+define( 'SPP_VERSION', '0.1.1' );
 define( 'SPP_DIR', plugin_dir_path( __FILE__ ) );
 
 // --- Configuración editable ---------------------------------------------
