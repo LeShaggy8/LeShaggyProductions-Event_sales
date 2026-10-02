@@ -66,6 +66,7 @@ main{flex:1;width:100%;max-width:520px;margin:0 auto;padding:16px}
 .cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .frame{position:absolute;inset:18%;border:3px solid rgba(57,255,136,.85);border-radius:16px;pointer-events:none}
 .cam:not(.live) .frame{display:none}
+#spp-start{position:relative;z-index:2}
 .msg{margin:10px 0 0;min-height:1.2em;font-size:14px;color:#ffb4b4}
 .btn{background:#39ff88;color:#05060a;border:0;border-radius:999px;padding:14px 22px;font-weight:700;font-size:16px;cursor:pointer}
 .manual{margin-top:20px}
